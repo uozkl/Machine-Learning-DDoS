@@ -15,7 +15,15 @@ csv_col_datatype = {
     "Dst Port": "uint16",
     " Destination Port": "uint16",
     " Source Port": "uint16",
-    "Src Port": "uint16"
+    "Src Port": "uint16",
+    "Total Length of Fwd Packets": "uint64",
+    " Total Length of Bwd Packets": "uint64",
+    " Fwd Header Length": "uint16",
+    " Bwd Header Length": "uint16",
+    'TotLen Fwd Pkts': "uint64",
+    'TotLen Bwd Pkts': "uint64",
+    'Fwd Header Len': "uint16",
+    'Bwd Header Len': "uint16"
 }
 # CIC meter use a different naming method in the later version
 csv_col_names_ver_1 = [
@@ -66,7 +74,7 @@ hosts = [
 
 def get_conn_based_window(init_index, num_of_conn=conn_based_window_size):
     start_index = init_index - num_of_conn if init_index >= num_of_conn else 0
-    return df[start_index:init_index]
+    return df[start_index:init_index+1]
 
 
 def get_time_based_window(init_index, interval_in_sec=time_based_window_size):
@@ -78,7 +86,7 @@ def get_time_based_window(init_index, interval_in_sec=time_based_window_size):
         if end_time - start_time > interval_in_sec:
             break
         start_index -= 1
-    return df[start_index + 1:init_index]
+    return df[start_index + 1:init_index+1]
 
 
 def cal_lables(df_in):
@@ -166,30 +174,30 @@ def cal_lables(df_in):
     bwd_header_len = sum([i[__get_feature_index('bwd header')] for i in fwd_flows] + [i[__get_feature_index('fwd header')] for i in bwd_flows])
 
     # Number of flows in the window with FIN flag
-    sum(df_in[cols_inuse[__get_feature_index('fin')]])
+    fin_cnt = sum(df_in[cols_inuse[__get_feature_index('fin')]])
 
     # Number of flows in the window with RST flag
-    sum(df_in[cols_inuse[__get_feature_index('rst')]])
+    rst_cnt = sum(df_in[cols_inuse[__get_feature_index('rst')]])
 
     # Number of flows in the window with SYN flag
-    sum(df_in[cols_inuse[__get_feature_index('syn')]])
+    syn_cnt = sum(df_in[cols_inuse[__get_feature_index('syn')]])
 
     # Number of flows in the window with PUSH flag
-    sum(df_in[cols_inuse[__get_feature_index('push')]])
+    psh_cnt = sum(df_in[cols_inuse[__get_feature_index('push')]])
 
     # Number of flows in the window with ACK flag
-    sum(df_in[cols_inuse[__get_feature_index('ack')]])
+    ack_cnt = sum(df_in[cols_inuse[__get_feature_index('ack')]])
 
     # Number of flows in the window with URG flag
-    sum(df_in[cols_inuse[__get_feature_index('urg')]])
+    urg_cnt = sum(df_in[cols_inuse[__get_feature_index('urg')]])
 
     # Number of flows in the window with CWE flag
-    sum(df_in[cols_inuse[__get_feature_index('cwe')]])
+    cwe_cnt = sum(df_in[cols_inuse[__get_feature_index('cwe')]])
 
     # Number of flows in the window with ECE flag
-    sum(df_in[cols_inuse[__get_feature_index('ece')]])
+    ece_cnt = sum(df_in[cols_inuse[__get_feature_index('ece')]])
 
-    return time_interval_fwd
+    return total_fwd, total_bwd, total_len_fwd, total_len_bwd, min_len_fwd, min_len_bwd, max_len_fwd, max_len_bwd, mean_len_fwd, mean_len_bwd, std_len_fwd, std_len_bwd, time_interval_fwd, time_interval_bwd, fwd_psh_cnt, bwd_psh_cnt, fwd_psh_cnt, bwd_psh_cnt, fwd_header_len, bwd_header_len, fin_cnt, rst_cnt, syn_cnt, psh_cnt, ack_cnt, urg_cnt, cwe_cnt, ece_cnt
 
 
 def __str_to_timestamp(str_time):
