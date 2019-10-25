@@ -2,95 +2,45 @@ import pandas as pd
 import sys
 import re
 from collections.abc import Iterable
+from datetime import datetime
+from numpy import mean, std
 
-'''
-if len(sys.argv) <2:
-    path = input("No path arg, input path:\n")
-else:
-    path = sys.argv[1]
-'''
-# Test file path
-path = "D:/test.pcap_Flow.csv"
-
-# List of columns without unsed data, CIC meter use a different naming method in the later version
-# For most of the labels in the old version, there are a space in front of them
-csv_col_new = [
-    'Flow ID', 'Src IP', 'Src Port', 'Dst IP', 'Dst Port', 'Protocol',
-    'Timestamp', 'Flow Duration', 'Tot Fwd Pkts', 'Tot Bwd Pkts',
-    'TotLen Fwd Pkts', 'TotLen Bwd Pkts', 'Fwd Pkt Len Max', 'Fwd Pkt Len Min',
-    'Fwd Pkt Len Mean', 'Fwd Pkt Len Std', 'Bwd Pkt Len Max',
-    'Bwd Pkt Len Min', 'Bwd Pkt Len Mean', 'Bwd Pkt Len Std', 'Fwd Header Len',
-    'Bwd Header Len', 'Fwd PSH Flags', 'Bwd PSH Flags', 'Fwd URG Flags',
-    'Bwd URG Flags', 'FIN Flag Cnt', 'SYN Flag Cnt', 'RST Flag Cnt',
-    'PSH Flag Cnt', 'ACK Flag Cnt', 'URG Flag Cnt', 'CWE Flag Count',
-    'ECE Flag Cnt', 'Label'
-]
-unused_csv_col_new = [
-    'Flow Byts/s', 'Flow Pkts/s', 'Flow IAT Mean', 'Flow IAT Std',
-    'Flow IAT Max', 'Flow IAT Min', 'Fwd IAT Tot', 'Fwd IAT Mean',
-    'Fwd IAT Std', 'Fwd IAT Max', 'Fwd IAT Min', 'Bwd IAT Tot', 'Bwd IAT Mean',
-    'Bwd IAT Std', 'Bwd IAT Max', 'Bwd IAT Min', 'Fwd Pkts/s', 'Bwd Pkts/s',
-    'Pkt Len Min', 'Pkt Len Max', 'Pkt Len Mean', 'Pkt Len Std', 'Pkt Len Var',
-    'Down/Up Ratio', 'Pkt Size Avg', 'Fwd Seg Size Avg', 'Bwd Seg Size Avg',
-    'Fwd Byts/b Avg', 'Fwd Pkts/b Avg', 'Fwd Blk Rate Avg', 'Bwd Byts/b Avg',
-    'Bwd Pkts/b Avg', 'Bwd Blk Rate Avg', 'Subflow Fwd Pkts',
-    'Subflow Fwd Byts', 'Subflow Bwd Pkts', 'Subflow Bwd Byts',
-    'Init Fwd Win Byts', 'Init Bwd Win Byts', 'Fwd Act Data Pkts',
-    'Fwd Seg Size Min', 'Active Mean', 'Active Std', 'Active Max',
-    'Active Min', 'Idle Mean', 'Idle Std', 'Idle Max', 'Idle Min'
-]
-csv_col_old = [
-    'Flow ID', ' Source IP', ' Source Port', ' Destination IP',
-    ' Destination Port', ' Protocol', ' Timestamp', ' Flow Duration',
-    ' Total Fwd Packets', ' Total Backward Packets',
-    'Total Length of Fwd Packets', ' Total Length of Bwd Packets',
-    ' Fwd Packet Length Max', ' Fwd Packet Length Min',
-    ' Fwd Packet Length Mean', ' Fwd Packet Length Std',
-    'Bwd Packet Length Max', ' Bwd Packet Length Min',
-    ' Bwd Packet Length Mean', ' Bwd Packet Length Std', ' Fwd Header Length',
-    ' Bwd Header Length', 'Fwd PSH Flags', ' Bwd PSH Flags', ' Fwd URG Flags',
-    ' Bwd URG Flags', 'FIN Flag Count', ' SYN Flag Count', ' RST Flag Count',
-    ' PSH Flag Count', ' ACK Flag Count', ' URG Flag Count', ' CWE Flag Count',
-    ' ECE Flag Count', ' Label'
-]
-unused_csv_col_old = [
-    'Flow Bytes/s', ' Flow Packets/s', ' Flow IAT Mean', ' Flow IAT Std',
-    ' Flow IAT Max', ' Flow IAT Min', 'Fwd IAT Total', ' Fwd IAT Mean',
-    ' Fwd IAT Std', ' Fwd IAT Max', ' Fwd IAT Min', 'Bwd IAT Total',
-    ' Bwd IAT Mean', ' Bwd IAT Std', ' Bwd IAT Max', ' Bwd IAT Min',
-    'Fwd Packets/s', ' Bwd Packets/s', ' Min Packet Length',
-    ' Max Packet Length', ' Packet Length Mean', ' Packet Length Std',
-    ' Packet Length Variance', ' Down/Up Ratio', ' Average Packet Size',
-    ' Avg Fwd Segment Size', ' Avg Bwd Segment Size', ' Fwd Header Length.1',
-    'Fwd Avg Bytes/Bulk', ' Fwd Avg Packets/Bulk', ' Fwd Avg Bulk Rate',
-    ' Bwd Avg Bytes/Bulk', ' Bwd Avg Packets/Bulk', 'Bwd Avg Bulk Rate',
-    'Subflow Fwd Packets', ' Subflow Fwd Bytes', ' Subflow Bwd Packets',
-    ' Subflow Bwd Bytes', 'Init_Win_bytes_forward', ' Init_Win_bytes_backward',
-    ' act_data_pkt_fwd', ' min_seg_size_forward', 'Active Mean', ' Active Std',
-    ' Active Max', ' Active Min', 'Idle Mean', ' Idle Std', ' Idle Max',
-    ' Idle Min', 'SimillarHTTP', ' Inbound'
-]
+conn_based_window_size = 20
+time_based_window_size = 1
 
 # Column data type
 csv_col_datatype = {
     "Protocol": "int8",
+    " Protocol": "int8",
     "Dst Port": "uint16",
-    "Destination Port": "uint16",
-    "Source Port": "uint16",
+    " Destination Port": "uint16",
+    " Source Port": "uint16",
     "Src Port": "uint16"
 }
+# CIC meter use a different naming method in the later version
+csv_col_names_ver_1 = [
+    'Src IP', 'Src Port', 'Dst IP', 'Dst Port', 'Protocol', 'Timestamp', 'Tot Fwd Pkts', 'Tot Bwd Pkts',
+    'TotLen Fwd Pkts', 'TotLen Bwd Pkts', 'Fwd Header Len', 'Bwd Header Len', 'Fwd PSH Flags', 'Bwd PSH Flags',
+    'Fwd URG Flags', 'Bwd URG Flags', 'FIN Flag Cnt', 'SYN Flag Cnt', 'RST Flag Cnt', 'PSH Flag Cnt', 'ACK Flag Cnt',
+    'URG Flag Cnt', 'CWE Flag Count', 'ECE Flag Cnt', 'Label'
+]
+csv_col_names_ver_2 = [
+    ' Source IP', ' Source Port', ' Destination IP', ' Destination Port', ' Protocol', ' Timestamp',
+    ' Total Fwd Packets', ' Total Backward Packets', 'Total Length of Fwd Packets', ' Total Length of Bwd Packets',
+    ' Fwd Header Length', ' Bwd Header Length', 'Fwd PSH Flags', ' Bwd PSH Flags', ' Fwd URG Flags', ' Bwd URG Flags',
+    'FIN Flag Count', ' SYN Flag Count', ' RST Flag Count', ' PSH Flag Count', ' ACK Flag Count', ' URG Flag Count',
+    ' CWE Flag Count', ' ECE Flag Count', ' Label'
+]
+
+# Test file path
+path = "D:/Machine-Learning-DDoS/Dataset/DNS/DrDoS_DNS_split/DrDoS_DNS_1.csv"
 
 # Read file
 encoding_type = "utf-8"
-cols_inuse = csv_col_old
+cols_inuse = csv_col_names_ver_1
 while (True):
     try:
-        df = pd.read_csv(
-            path,
-            low_memory=False,
-            encoding=encoding_type,
-            dtype=csv_col_datatype,
-            usecols=csv_col_new)
+        df = pd.read_csv(path, low_memory=False, encoding=encoding_type, dtype=csv_col_datatype, usecols=cols_inuse)
         break
     except FileNotFoundError:
         path = input("CSV path error, input the path of the netflow csv file")
@@ -100,14 +50,145 @@ while (True):
         else:
             raise e
     except ValueError as e:
-        if cols_inuse == csv_col_old:
-            cols_inuse = csv_col_new
+        if cols_inuse == csv_col_names_ver_1:
+            cols_inuse = csv_col_names_ver_2
         else:
             raise e
 
+cols_inuse = list(df.columns)
 
-# Getter
-def __get_feature_tags(name):
+# Host ip in UNB dataset
+hosts = [
+    "205.174.165.81", "192.168.50.1", "192.168.50.4", "192.168.50.8", "192.168.50.5", "192.168.50.6", "192.168.50.7",
+    "192.168.50.9", "192.168.50.6", "192.168.50.7", "192.168.50.8"
+]
+
+
+def get_conn_based_window(init_index, num_of_conn=conn_based_window_size):
+    start_index = init_index - num_of_conn if init_index >= num_of_conn else 0
+    return df[start_index:init_index]
+
+
+def get_time_based_window(init_index, interval_in_sec=time_based_window_size):
+    start_index = init_index
+    timestamp_col_name = cols_inuse[__get_feature_index('time')]
+    end_time = __str_to_timestamp(df[timestamp_col_name][init_index])
+    while (start_index >= 0):
+        start_time = __str_to_timestamp(df[timestamp_col_name][start_index])
+        if end_time - start_time > interval_in_sec:
+            break
+        start_index -= 1
+    return df[start_index + 1:init_index]
+
+
+def cal_lables(df_in):
+    fwd_flows = []
+    bwd_flows = []
+    for flow in df_in.values:
+        if flow[__get_feature_index('Source IP')] in hosts:
+            fwd_flows.append(flow)
+        else:
+            bwd_flows.append(flow)
+    # Total flows in the forward direction in the window
+    total_fwd = len(fwd_flows)
+
+    # Total flows in the backward direction in the window
+    total_bwd = len(bwd_flows)
+
+    #!!
+    fwd_flows_size = [i[__get_feature_index('total len fwd')] for i in fwd_flows] + [i[__get_feature_index('total len bwd')] for i in bwd_flows]
+    bwd_flows_size = [i[__get_feature_index('total len bwd')] for i in fwd_flows] + [i[__get_feature_index('total len fwd')] for i in bwd_flows]
+    # Total size of netflows in forward direction in the window
+    total_len_fwd = sum(fwd_flows_size)
+
+    # Total size of netflows in backward direction in the window
+    total_len_bwd = sum(bwd_flows_size)
+
+    # Minimum size of flow in forward direction in the window
+    min_len_fwd = min(fwd_flows_size)
+
+    # Minimum size of flow in backward direction in the window
+    min_len_bwd = min(bwd_flows_size)
+
+    # Maximum size of flow in forward direction in the window
+    max_len_fwd = max(fwd_flows_size)
+
+    # Maximum size of flow in backward direction in the window
+    max_len_bwd = max(bwd_flows_size)
+
+    # Mean size of flow in forward direction in the window
+    mean_len_fwd = mean(fwd_flows_size)
+
+    # Mean size of flow in backward direction in the window
+    mean_len_bwd = mean(bwd_flows_size)
+
+    # Standard Deviation size of flow in forward direction in the window
+    std_len_fwd = std(fwd_flows_size)
+
+    # Standard Deviation size of flow in backward direction in the window
+    std_len_bwd = std(bwd_flows_size)
+
+    # Time between 2 flows in the window in the forward direction
+    time_interval_fwd = []
+    if total_fwd == 0 or total_fwd == 1:
+        time_interval_fwd = [0]
+    else:
+        timestamps = [__str_to_timestamp(i[__get_feature_index('time')]) for i in fwd_flows]
+        for i in range(len(timestamps) - 1):
+            time_interval_fwd.append(abs(timestamps[i+1]-timestamps[i]))
+
+    # Time between 2 flows in the window in the backward direction
+    time_interval_bwd = []
+    if total_bwd == 0 or total_bwd == 1:
+        time_interval_bwd = [0]
+    else:
+        timestamps = [__str_to_timestamp(i[__get_feature_index('time')]) for i in bwd_flows]
+        for i in range(len(timestamps) - 1):
+            time_interval_bwd.append(abs(timestamps[i+1]-timestamps[i]))
+
+    # Number of times a PSH flag was set in flows in the window in the forward direction
+# !!
+    fwd_psh_cnt=sum([i[__get_feature_index('fwd psh')] for i in fwd_flows])
+
+    # Number of times a PSH flag was set in flows in the window in the backward direction
+    bwd_psh_cnt = sum([i[__get_feature_index('bwd psh')] for i in bwd_flows])
+
+    # Number of times a URG flag was set in flows in the window in the forward direction
+    fwd_psh_cnt = sum([i[__get_feature_index('fwd urg')] for i in fwd_flows])
+    
+    # Number of times a URG flag was set in flows in the window in the backward direction
+    bwd_psh_cnt = sum([i[__get_feature_index('bwd psh')] for i in bwd_flows])
+
+    # Total bytes used in headers in the forward direction in the window
+    fwd_header_len = sum([i[__get_feature_index('fwd header')] for i in fwd_flows] + [i[__get_feature_index('bwd header')] for i in bwd_flows])
+    
+    # Total bytes used in headers in the backward direction in the window
+    bwd_header_len = sum([i[__get_feature_index('bwd header')] for i in fwd_flows] + [i[__get_feature_index('fwd header')] for i in bwd_flows])
+
+    # Number of flows in the window with FIN flag
+    sum(df_in[cols_inuse[__get_feature_index('fin')]])
+    # Number of flows in the window with RST flag
+    sum(df_in[cols_inuse[__get_feature_index('rst')]])
+    # Number of flows in the window with SYN flag
+    sum(df_in[cols_inuse[__get_feature_index('syn')]])
+    # Number of flows in the window with PUSH flag
+    sum(df_in[cols_inuse[__get_feature_index('push')]])
+    # Number of flows in the window with ACK flag
+    sum(df_in[cols_inuse[__get_feature_index('ack')]])
+    # Number of flows in the window with URG flag
+    sum(df_in[cols_inuse[__get_feature_index('urg')]])
+    # Number of flows in the window with CWE flag
+    sum(df_in[cols_inuse[__get_feature_index('cwe')]])
+    # Number of flows in the window with ECE flag
+    sum(df_in[cols_inuse[__get_feature_index('ece')]])
+    return time_interval_fwd
+
+def __str_to_timestamp(str_time):
+    # datetime_object = datetime.strptime('2018-12-01 10:51:39.820842', '%Y-%m-%d %H:%M:%S.%f')
+    return datetime.strptime(str_time, '%Y-%m-%d %H:%M:%S.%f').timestamp()
+
+
+def __get_feature_index(name):
     name = name.upper()
     general_tag = False  # Flow id, source prot, ...
     direction_tag = False  # Fwd, Bwd
@@ -119,7 +200,7 @@ def __get_feature_tags(name):
     for i in available_flags:
         if i in name:
             flag_tag = i
-    if "PUSH" in available_flags: flag_tag = "PSH"
+    if "PUSH" in name: flag_tag = "PSH"
 
     if re.match(".*FO.*W.*D.*", name) or re.match(".*FWD.*", name):
         direction_tag = "FWD"
@@ -155,47 +236,33 @@ def __get_feature_tags(name):
         general_tag = "LABEL"
 
     header_tag = re.match(".*HEA.*", name) is not None
-
-    return [general_tag, direction_tag, flag_tag, type_tag, header_tag]
-
-
-def get_feature_index(name):
-    general_tag, direction_tag, flag_tag, type_tag, header_tag = __get_feature_tags(name)
     result = []
     for col_name in cols_inuse:
-        if general_tag and not general_tag in col_name.upper():
+        if general_tag and not general_tag.upper() in col_name.upper():
             continue
-        if direction_tag and not direction_tag in col_name.upper():
+        if direction_tag and not direction_tag.upper() in col_name.upper():
             continue
-        if flag_tag and not flag_tag in col_name.upper():
+        if flag_tag and not flag_tag.upper() in col_name.upper():
             continue
-        if type_tag and not type_tag in col_name.upper():
+        if type_tag and not type_tag.upper() in col_name.upper():
             continue
         if header_tag and not "HEADER" in col_name.upper():
             continue
         result.append(col_name)
+
+    if not (re.match(".*SIZE.*", name) or re.match(".*LEN.*", name)) and not header_tag:
+        result = [item for item in result if not "Length" in item]
+    else:
+        result = [item for item in result if "Length" in item]
+    if flag_tag:
+        if direction_tag:
+            result = [item for item in result if not re.match(".*CNT.*", item.upper()) and not re.match(".*COUNT.*", item.upper())]
+        else:
+            result = [item for item in result if re.match(".*CNT.*", item.upper()) or re.match(".*COUNT.*", item.upper())]
+
     if len(result) == 0:
         raise KeyError("No such column as", name)
     elif len(result) != 1:
         raise ValueError("Result is too vague, give more detailed keywords,", result)
     else:
         return cols_inuse.index(result[0])
-
-
-def get_feature(name, source=None):
-    '''
-    Example:
-        get_feature("Time"), return a sub dataframe of the whole column
-        get_feature(["FIN cnt", "Time"]), return a sub dataframe of two columns
-        get_feature("Time", df.values[2]), return the exact value of the block of that ndarray
-        get_feature("Time", 5), return the exact value of the block of row 6
-        get_feature(["FIN cnt", "Time"], 5), return a list of value of the block of row 6
-    '''
-    if not isinstance(name, Iterable):
-        name = [name]
-    name_index = [get_feature_index(n) for n in name]
-    if source is None:
-        return df[[cols_inuse[n] for n in name_index]]
-    if isinstance(source, int):
-        return [df.values[source][n] for n in name_index]
-    return [source[n] for n in name_index]
