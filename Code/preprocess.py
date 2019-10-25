@@ -155,33 +155,42 @@ def cal_lables(df_in):
 
     # Number of times a URG flag was set in flows in the window in the forward direction
     fwd_psh_cnt = sum([i[__get_feature_index('fwd urg')] for i in fwd_flows])
-    
+
     # Number of times a URG flag was set in flows in the window in the backward direction
     bwd_psh_cnt = sum([i[__get_feature_index('bwd psh')] for i in bwd_flows])
 
     # Total bytes used in headers in the forward direction in the window
     fwd_header_len = sum([i[__get_feature_index('fwd header')] for i in fwd_flows] + [i[__get_feature_index('bwd header')] for i in bwd_flows])
-    
+
     # Total bytes used in headers in the backward direction in the window
     bwd_header_len = sum([i[__get_feature_index('bwd header')] for i in fwd_flows] + [i[__get_feature_index('fwd header')] for i in bwd_flows])
 
     # Number of flows in the window with FIN flag
     sum(df_in[cols_inuse[__get_feature_index('fin')]])
+
     # Number of flows in the window with RST flag
     sum(df_in[cols_inuse[__get_feature_index('rst')]])
+
     # Number of flows in the window with SYN flag
     sum(df_in[cols_inuse[__get_feature_index('syn')]])
+
     # Number of flows in the window with PUSH flag
     sum(df_in[cols_inuse[__get_feature_index('push')]])
+
     # Number of flows in the window with ACK flag
     sum(df_in[cols_inuse[__get_feature_index('ack')]])
+
     # Number of flows in the window with URG flag
     sum(df_in[cols_inuse[__get_feature_index('urg')]])
+
     # Number of flows in the window with CWE flag
     sum(df_in[cols_inuse[__get_feature_index('cwe')]])
+
     # Number of flows in the window with ECE flag
     sum(df_in[cols_inuse[__get_feature_index('ece')]])
+
     return time_interval_fwd
+
 
 def __str_to_timestamp(str_time):
     # datetime_object = datetime.strptime('2018-12-01 10:51:39.820842', '%Y-%m-%d %H:%M:%S.%f')
