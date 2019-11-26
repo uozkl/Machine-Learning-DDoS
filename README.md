@@ -4,11 +4,19 @@ CSI4900 Project, DDoS detection using machine learning
 Detect DDoS attack traffic using a machine learning method.<br>
 Giving network traffic of a period and tells whether the remote host is committing DDoS attack.
 
-## Repo data structure
-Machine-Learning-DDoS<br>
-&emsp;|&#8722;&#8722;sr&emsp;&emsp;&emsp;&emsp;Code of this project<br>
-&emsp;|&#8722;&#8722;Dataset&emsp;&emsp;&emsp;The dataset used for training and testing<br>
-&emsp;|&#8722;&#8722;Paper&emsp;&emsp;&emsp;&emsp;Paper and summery of realated work<br>
+## Directory layout
+```
+Machine-Learning-DDoS
+├── data                   # Dataset
+│   └── processed          # Processed data for the score
+│   └── raw                # Raw unprocessed data
+├── docs                   # Documentation
+├── models                 # Trained classifiers
+├── references             # Reference papers
+└── src                    # Source files
+    └── process            # Preprocess classes
+    └── score              # Class to generate accuracy of 5 selected classifiers
+```
 
 ## Dataset
 [CICDDoS2019 from UNB](https://www.unb.ca/cic/datasets/ddos-2019.html)<br>
