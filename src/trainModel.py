@@ -9,6 +9,7 @@ import warnings
 from multiprocessing import Process, Pool
 from process.preprocess import Preprocess
 import pickle
+import gc
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -16,18 +17,20 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Malicious data from 'SYN\\Syn_2_split\\Syn_2_3.csv'
+
+# Direct generate features from flows
 '''
-benign = Preprocess("D:/BENIGN.csv")
-malicious = Preprocess("D:/MALICIOUS.csv")
-benign_features_time = pd.read_csv("D:/Benign_features_time.csv")
-malicious_features_time = pd.read_csv("D:/Malicious_features_time.csv")
+benign_features_conn = Preprocess("D:/BENIGN.csv").gen_feature_df_conn()
+gc.collect()
+malicious_features_conn =  Preprocess("D:/MALICIOUS.csv").gen_feature_df_conn()
+gc.collect()
 '''
 
+# Indirect read generated features
 benign_features_conn = pd.read_csv("D:/Benign_features_conn.csv")
 malicious_features_conn = pd.read_csv("D:/Malicious_features_conn.csv")
 
-# Test, conn based
-
+# Test
 x = pd.concat([malicious_features_conn, benign_features_conn]).values
 # Remove id
 x = [i[1:] for i in x]
