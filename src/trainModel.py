@@ -52,7 +52,7 @@ multinomial_nb = MultinomialNB()
 
 # Support vector machine
 
-svm = SVC()
+#svm = SVC()
 
 # K-nearest neighbors
 knn = KNeighborsClassifier(n_neighbors=3)

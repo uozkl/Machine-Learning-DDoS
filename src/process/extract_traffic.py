@@ -3,8 +3,7 @@ import os
 import time
 import copy
 
-#path = './Dataset'
-path = 'D:/4900 Project/Dataset'
+path = './Dataset'
 
 files = []
 cols = [
@@ -31,6 +30,7 @@ for r, d, f in os.walk(path):
         if '.csv' in file and "NUSW-NB15_features" not in file:
             files.append(os.path.join(r, file))
 def extract_normal(files):
+    # Extract bengin flows from all the files
     normal_traffic = []
     counter = 0
     for f in files:
@@ -56,14 +56,18 @@ def extract_normal(files):
             normal_traffic = []
             normal_df = None
 
-def extract_malicious(files):
+def extract_malicious(files, max_flow=60000, csv_path=None):
+    # Extract malicious flow from path
+    # If path not defined then use all the files
+
     malicious_traffic = []
     counter = 0
     for f in files:
         print(f)
-        if counter >= 60000:
+        if counter >= max_flow:
             break
-        #df = pd.read_csv("D:\\4900 Project\\Dataset\\DNS\\DrDoS_DNS_split\\DrDoS_DNS_1.csv", low_memory=False)
+        if csv_path is not None:
+            f = csv_path
         try:
             df = pd.read_csv(f, low_memory=False)
             index = len(list(df.columns)) - 1
@@ -73,7 +77,9 @@ def extract_malicious(files):
                     tmp[index]="MALICIOUS"
                     malicious_traffic.append(tmp)
                     counter += 1
-                if counter >= 60000:
+                if counter >= max_flow:
                     break
         except Exception as e:
             print("ERROR in", f, "\n", e)
+        if csv_path is not None:
+            break
